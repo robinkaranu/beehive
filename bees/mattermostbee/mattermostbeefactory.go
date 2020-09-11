@@ -205,6 +205,23 @@ func (factory *MattermostBeeFactory) Events() []bees.EventDescriptor {
 				},
 			},
 		},
+		{
+			Namespace:   factory.Name(),
+			Name:        "status_change",
+			Description: "An user status changed on Mattermost",
+			Options: []bees.PlaceholderDescriptor{
+				{
+					Name:        "user_id",
+					Description: "The user id which status changed",
+					Type:        "string",
+				},
+				{
+					Name:        "status",
+					Description: "The new user status",
+					Type:        "string",
+				},
+			},
+		},
 		// TODO: user joins/parts
 		// TODO: user changes online status
 		// TODO: post was pinned/unpinned
