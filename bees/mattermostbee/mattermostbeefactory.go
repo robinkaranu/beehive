@@ -156,9 +156,37 @@ func (factory *MattermostBeeFactory) Events() []bees.EventDescriptor {
 				// TODO: channel-type
 			},
 		},
+		{
+			Namespace:   factory.Name(),
+			Name:        "reaction_added",
+			Description: "An emoji reaction was added over Mattermost",
+			Options: []bees.PlaceholderDescriptor{
+				{
+					Name:        "emoji_name",
+					Description: "Text name of the emoji reaction",
+					Type:        "string",
+				},
+				{
+					Name:        "post_id",
+					Description: "The id of the post which was reacted to",
+					Type:        "string",
+				},
+				{
+					Name:        "user_id",
+					Description: "The user id of the reactions author",
+					Type:        "string",
+				},
+				{
+					Name:        "create_at",
+					Description: "The time of the reaction ",
+					Type:        "integer",
+				},
+				// TODO: also output channel name
+				// TODO: channel-type
+			},
+		},
 		// TODO: user joins/parts
 		// TODO: user changes online status
-		// TODO: perhaps: [emoji-]reaction (all of them, if possible)
 		// TODO: post was pinned/unpinned
 	}
 	return events
@@ -191,6 +219,7 @@ func (factory *MattermostBeeFactory) Actions() []bees.ActionDescriptor {
 				},
 			},
 		},
+		// TODO: reaction_removed
 	}
 	return actions
 }
