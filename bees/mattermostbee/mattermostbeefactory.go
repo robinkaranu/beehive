@@ -222,8 +222,50 @@ func (factory *MattermostBeeFactory) Events() []bees.EventDescriptor {
 				},
 			},
 		},
-		// TODO: user joins/parts
-		// TODO: user changes online status
+		{
+			Namespace:   factory.Name(),
+			Name:        "user_added",
+			Description: "An user was added to a channel on Mattermost",
+			Options: []bees.PlaceholderDescriptor{
+				{
+					Name:        "user_id",
+					Description: "The user id which status changed",
+					Type:        "string",
+				},
+				{
+					Name:        "channel_id",
+					Description: "The new user status",
+					Type:        "string",
+				},
+				{
+					Name:        "team_id",
+					Description: "The team id",
+					Type:        "string",
+				},
+			},
+		},
+		{
+			Namespace:   factory.Name(),
+			Name:        "user_removed",
+			Description: "An user was removed from a channel on Mattermost",
+			Options: []bees.PlaceholderDescriptor{
+				{
+					Name:        "user_id",
+					Description: "The user id",
+					Type:        "string",
+				},
+				{
+					Name:        "channel_id",
+					Description: "The new user status",
+					Type:        "string",
+				},
+				{
+					Name:        "remover id",
+					Description: "The remover id",
+					Type:        "string",
+				},
+			},
+		},
 		// TODO: post was pinned/unpinned
 	}
 	return events
