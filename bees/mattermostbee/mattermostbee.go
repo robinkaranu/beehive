@@ -28,6 +28,7 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 
 	"github.com/muesli/beehive/bees"
+	//"github.com/davecgh/go-spew/spew"
 )
 
 // MattermostBee is a Bee that can connect to an Mattermost server.
@@ -94,19 +95,19 @@ func (mod *MattermostBee) Run(eventChan chan bees.Event) {
 	mod.LogDebugf("Client logged in. Auth Token: %s.", mod.client.AuthToken)
 
 	// setup websocket client:
-	var err error
+	var err *mattermost.AppError
 	mod.webSocketClient, err = mattermost.NewWebSocketClient4(mod.wsUrl, mod.authToken)
 	if err != nil {
-		mod.LogErrorf("Problem connecting to Websocket API: %s", err.Message)
+		mod.LogErrorf("Problem connecting to Websocket API: %s", err)
 		mod.LogFatal("Error setting up Websocket connection.")
 	}
 
 	// Fetch our bee's user id
 	mod.LogDebugf("Using etag %s for caching.", etag)
-	var resp *mattermost.Response
-	mod.clientUser, resp = mod.client.GetMe(etag)
+	var get_me_resp *mattermost.Response
+	mod.clientUser, get_me_resp = mod.client.GetMe(etag)
 	if resp.Error != nil {
-		mod.LogErrorf("Could not fetch user information: %s", resp.Error.Message)
+		mod.LogErrorf("Could not fetch user information: %s", get_me_resp.Error.Message)
 		mod.LogFatal("Could not get own user id, loop protection not possible")
 	}
 
@@ -126,47 +127,105 @@ func (mod *MattermostBee) Run(eventChan chan bees.Event) {
 // HandleWebSocketResponse creates a bees.Event for (certain) incoming websocket events
 func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEvent, eventChan chan bees.Event) {
 	// Lets only reponded to messaged posted events
-	if event.Event != mattermost.WEBSOCKET_EVENT_POSTED {
-		return
+	switch event.Event {
+	case mattermost.WEBSOCKET_EVENT_HELLO:
+		ev := bees.Event{
+			Bee:  mod.Name(),
+			Name: "hello",
+			Options: []bees.Placeholder{
+				{
+					Name:  "user_id",
+					Type:  "string",
+					Value: event.Broadcast.UserId,
+				},
+				{
+					Name:  "server_version",
+					Type:  "string",
+					Value: event.Data["server_version"],
+				},
+			},
+		}
+		eventChan <- ev
+		//mod.connectedState <- true
+	case mattermost.WEBSOCKET_EVENT_POSTED:
+		post := mattermost.PostFromJson(strings.NewReader(event.Data["post"].(string)))
+		if post == nil {
+			mod.LogErrorf("Could not parse json from: %s", event.Data["post"].(string))
+			return
+		}
+		if post.UserId == mod.clientUser.Id {
+			mod.LogDebugf("Skipping my own message")
+			return
+		}
+		ev := bees.Event{
+			Bee:  mod.Name(),
+			Name: "message",
+			Options: []bees.Placeholder{
+				{
+					Name:  "id",
+					Type:  "string",
+					Value: post.Id,
+				},
+				{
+					Name:  "channel_id",
+					Type:  "string",
+					Value: post.ChannelId,
+				},
+				{
+					Name:  "user_id",
+					Type:  "string",
+					Value: post.UserId,
+				},
+				{
+					Name:  "text",
+					Type:  "string",
+					Value: post.Message,
+				},
+			},
+		}
+		eventChan <- ev
+	case mattermost.WEBSOCKET_EVENT_REACTION_ADDED:
+		reaction := mattermost.ReactionFromJson(strings.NewReader(event.Data["reaction"].(string)))
+		if reaction == nil {
+			mod.LogErrorf("Could not parse json from: %s", event.Data["reaction"].(string))
+			return
+		}
+		if reaction.UserId == mod.clientUser.Id {
+			mod.LogDebugf("Skipping my own reaction")
+			return
+		}
+		ev := bees.Event{
+			Bee:  mod.Name(),
+			Name: "reaction",
+			Options: []bees.Placeholder{
+				{
+					Name:  "user_id",
+					Type:  "string",
+					Value: reaction.UserId,
+				},
+				{
+					Name:  "post_id",
+					Type:  "string",
+					Value: reaction.PostId,
+				},
+				{
+					Name:  "emoji_name",
+					Type:  "string",
+					Value: reaction.EmojiName,
+				},
+				{
+					Name:  "create_at",
+					Type:  "integer",
+					Value: reaction.CreateAt,
+				},
+			},
+		}
+		eventChan <- ev
+	default:
+		mod.LogDebugf("Websocket event of type %s is not being handled", event.Event)
+		//spew.Dump(event)
 	}
 
-	post := mattermost.PostFromJson(strings.NewReader(event.Data["post"].(string)))
-	if post == nil {
-		mod.LogErrorf("Could not parse json from: %s", event.Data["post"].(string))
-		return
-	}
-	if post.UserId == mod.clientUser.Id {
-		mod.LogDebug("Skipping my own message")
-		return
-	}
-	// TODO: emit signals for more actions. see TODOs in factory
-	ev := bees.Event{
-		Bee:  mod.Name(),
-		Name: "message",
-		Options: []bees.Placeholder{
-			{
-				Name:  "id",
-				Type:  "string",
-				Value: post.Id,
-			},
-			{
-				Name:  "channel_id",
-				Type:  "string",
-				Value: post.ChannelId,
-			},
-			{
-				Name:  "user_id",
-				Type:  "string",
-				Value: post.UserId,
-			},
-			{
-				Name:  "text",
-				Type:  "string",
-				Value: post.Message,
-			},
-		},
-	}
-	eventChan <- ev
 }
 
 // ReloadOptions parses the config options and initializes the Bee.
