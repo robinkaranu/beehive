@@ -82,7 +82,6 @@ func (mod *MattermostBee) Run(eventChan chan bees.Event) {
 
 	// setup basic api client:
 	mod.client = mattermost.NewAPIv4Client(mod.apiUrl)
-	// TODO: loginfoo (mail + password login -> token)
 	mod.client.SetToken(mod.authToken)
 
 	// test basic connection. ClientConfig in old format contains server version
@@ -254,7 +253,6 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 		}
 		eventChan <- ev
 	case mattermost.WEBSOCKET_EVENT_STATUS_CHANGE:
-		spew.Dump(event)
 		//statusChange := mattermost.StatusFromJson(strings.NewReader(event.Data["status_change"].(string)))
 		//spew.Dump(statusChange)
 		//if statusChange == nil {
@@ -262,7 +260,7 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 		//	return
 		//}
 		ev := bees.Event{
-			Bee: mod.Name(),
+			Bee:  mod.Name(),
 			Name: "status_change",
 			Options: []bees.Placeholder{
 				{
@@ -328,7 +326,6 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 		mod.LogDebugf("Websocket event of type %s is not being handled", event.Event)
 		spew.Dump(event)
 	}
-
 }
 
 // ReloadOptions parses the config options and initializes the Bee.
