@@ -221,6 +221,38 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 			},
 		}
 		eventChan <- ev
+	case mattermost.WEBSOCKET_EVENT_REACTION_REMOVED:
+		reaction := mattermost.ReactionFromJson(strings.NewReader(event.Data["reaction"].(string)))
+		if reaction == nil {
+			mod.LogErrorf("Could not parse json from: %s", event.Data["reaction"].(string))
+			return
+		}
+		if reaction.UserId == mod.clientUser.Id {
+			mod.LogDebugf("Skipping my own reaction removal")
+			return
+		}
+		ev := bees.Event{
+			Bee:  mod.Name(),
+			Name: "reaction_removed",
+			Options: []bees.Placeholder{
+				{
+					Name:  "user_id",
+					Type:  "string",
+					Value: reaction.UserId,
+				},
+				{
+					Name:  "post_id",
+					Type:  "string",
+					Value: reaction.PostId,
+				},
+				{
+					Name:  "emoji_name",
+					Type:  "string",
+					Value: reaction.EmojiName,
+				},
+			},
+		}
+		eventChan <- ev
 	default:
 		mod.LogDebugf("Websocket event of type %s is not being handled", event.Event)
 		//spew.Dump(event)
