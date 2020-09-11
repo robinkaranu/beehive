@@ -28,7 +28,7 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 
 	"github.com/muesli/beehive/bees"
-	//"github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 )
 
 // MattermostBee is a Bee that can connect to an Mattermost server.
@@ -253,9 +253,34 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 			},
 		}
 		eventChan <- ev
+	case mattermost.WEBSOCKET_EVENT_STATUS_CHANGE:
+		spew.Dump(event)
+		//statusChange := mattermost.StatusFromJson(strings.NewReader(event.Data["status_change"].(string)))
+		//spew.Dump(statusChange)
+		//if statusChange == nil {
+		//	mod.LogErrorf("Could not parse json from: %s", event.Data["status_change"].(string))
+		//	return
+		//}
+		ev := bees.Event{
+			Bee: mod.Name(),
+			Name: "status_change",
+			Options: []bees.Placeholder{
+				{
+					Name:  "user_id",
+					Type:  "string",
+					Value: event.Data["user_id"],
+				},
+				{
+					Name:  "status",
+					Type:  "string",
+					Value: event.Data["status"],
+				},
+			},
+		}
+		eventChan <- ev
 	default:
 		mod.LogDebugf("Websocket event of type %s is not being handled", event.Event)
-		//spew.Dump(event)
+		spew.Dump(event)
 	}
 
 }
