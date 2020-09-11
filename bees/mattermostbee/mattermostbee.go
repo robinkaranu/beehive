@@ -278,6 +278,52 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 			},
 		}
 		eventChan <- ev
+	case mattermost.WEBSOCKET_EVENT_USER_ADDED:
+		ev := bees.Event{
+			Bee:  mod.Name(),
+			Name: "user_added",
+			Options: []bees.Placeholder{
+				{
+					Name:  "user_id",
+					Type:  "string",
+					Value: event.Data["user_id"],
+				},
+				{
+					Name:  "channel_id",
+					Type:  "string",
+					Value: event.Broadcast.ChannelId,
+				},
+				{
+					Name:  "team_id",
+					Type:  "string",
+					Value: event.Data["team_id"],
+				},
+			},
+		}
+		eventChan <- ev
+	case mattermost.WEBSOCKET_EVENT_USER_REMOVED:
+		ev := bees.Event{
+			Bee:  mod.Name(),
+			Name: "user_removed",
+			Options: []bees.Placeholder{
+				{
+					Name:  "user_id",
+					Type:  "string",
+					Value: event.Data["user_id"],
+				},
+				{
+					Name:  "channel_id",
+					Type:  "string",
+					Value: event.Broadcast.ChannelId,
+				},
+				{
+					Name:  "remover_id",
+					Type:  "string",
+					Value: event.Data["remover_id"],
+				},
+			},
+		}
+		eventChan <- ev
 	default:
 		mod.LogDebugf("Websocket event of type %s is not being handled", event.Event)
 		spew.Dump(event)
