@@ -78,7 +78,7 @@ require (
 	github.com/prometheus/common v0.13.0 // indirect
 	github.com/rdegges/go-ipify v0.0.0-20150526035502-2d94a6a86c40
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/shuheiktgw/go-travis v0.3.1
+	github.com/shuheiktgw/go-travis v0.1.10-0.20190502100712-2d0b3e9898f0
 	github.com/simplepush/simplepush-go v0.0.0-20170307205831-8980e96b7b02
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
