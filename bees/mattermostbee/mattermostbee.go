@@ -42,6 +42,8 @@ type MattermostBee struct {
 	webSocketClient *mattermost.WebSocketClient
 	clientUser      *mattermost.User
 	channels        []string
+	// TODO: perhaps use cache2go
+	userCache       map[string]mattermost.User
 
 	apiUrl    string
 	wsUrl     string
@@ -72,10 +74,35 @@ func (mod *MattermostBee) Action(action bees.Action) []bees.Placeholder {
 	return outs
 }
 
+func (mod *MattermostBee) UserById(userId string) mattermost.User {
+	v, ok := mod.userCache[userId]
+	// bypass request if it has ever made before by this bee
+	if ok {
+	  return v
+	}
+
+	// set an etag
+	u, _ := uuid.NewV4()
+	etag := u.String()
+
+	user := &mattermost.User{}
+	var resp *mattermost.Response
+
+	if user, resp = mod.client.GetUser(userId, etag); resp.Error != nil {
+		mod.LogErrorf("Failed to fetch user information for id %s. %s %s", userId, resp.Error.Message, resp.Error.DetailedError)
+	}
+
+	spew.Dump(user)
+	// inject user to cache
+	mod.userCache[userId] = *user
+	return *user
+}
+
 // Run executes the Bee's event loop.
 func (mod *MattermostBee) Run(eventChan chan bees.Event) {
 	// channel signaling Mattermost connection status
 	mod.connectedState = make(chan bool)
+	mod.userCache = make(map[string]mattermost.User)
 	// set an etag
 	u, _ := uuid.NewV4()
 	etag := u.String()
@@ -100,7 +127,6 @@ func (mod *MattermostBee) Run(eventChan chan bees.Event) {
 		mod.LogErrorf("Problem connecting to Websocket API: %s", err)
 		mod.LogFatal("Error setting up Websocket connection.")
 	}
-
 	// Fetch our bee's user id
 	mod.LogDebugf("Using etag %s for caching.", etag)
 	var get_me_resp *mattermost.Response
@@ -136,6 +162,11 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 					Name:  "user_id",
 					Type:  "string",
 					Value: event.Broadcast.UserId,
+				},
+				{
+					Name:  "user_name",
+					Type:  "string",
+					Value: mod.UserById(event.Broadcast.UserId).Username,
 				},
 				{
 					Name:  "server_version",
@@ -176,6 +207,11 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 					Value: post.UserId,
 				},
 				{
+					Name:  "user_name",
+					Type:  "string",
+					Value: mod.UserById(post.UserId).Username,
+				},
+				{
 					Name:  "text",
 					Type:  "string",
 					Value: post.Message,
@@ -201,6 +237,11 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 					Name:  "user_id",
 					Type:  "string",
 					Value: reaction.UserId,
+				},
+				{
+					Name:  "user_name",
+					Type:  "string",
+					Value: mod.UserById(reaction.UserId).Username,
 				},
 				{
 					Name:  "post_id",
@@ -240,6 +281,11 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 					Value: reaction.UserId,
 				},
 				{
+					Name:  "user_name",
+					Type:  "string",
+					Value: mod.UserById(reaction.UserId).Username,
+				},
+				{
 					Name:  "post_id",
 					Type:  "string",
 					Value: reaction.PostId,
@@ -269,6 +315,11 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 					Value: event.Data["user_id"],
 				},
 				{
+					Name:  "user_name",
+					Type:  "string",
+					Value: mod.UserById(event.Data["user_id"].(string)).Username,
+				},
+				{
 					Name:  "status",
 					Type:  "string",
 					Value: event.Data["status"],
@@ -285,6 +336,11 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 					Name:  "user_id",
 					Type:  "string",
 					Value: event.Data["user_id"],
+				},
+				{
+					Name:  "user_name",
+					Type:  "string",
+					Value: mod.UserById(event.Data["user_id"].(string)).Username,
 				},
 				{
 					Name:  "channel_id",
@@ -308,6 +364,11 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 					Name:  "user_id",
 					Type:  "string",
 					Value: event.Data["user_id"],
+				},
+				{
+					Name:  "user_name",
+					Type:  "string",
+					Value: mod.UserById(event.Data["user_id"].(string)).Username,
 				},
 				{
 					Name:  "channel_id",
