@@ -196,7 +196,7 @@ func (mod *MattermostBee) HandleWebSocketResponse(event *mattermost.WebSocketEve
 		}
 		ev := bees.Event{
 			Bee:  mod.Name(),
-			Name: "reaction",
+			Name: "reaction_added",
 			Options: []bees.Placeholder{
 				{
 					Name:  "user_id",
